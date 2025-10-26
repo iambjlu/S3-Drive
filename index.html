@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <title>S3 Drive</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: '-apple-system', 'BlinkMacSystemFont', 'SF Pro', 'SF Pro Display', 'PingFang TC', 'Inter', 'Roboto', 'AppleGothic', 'Microsoft JhengHei UI', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: #222;
+        }
+
+        header {
+            padding: 1rem;
+            border-bottom: 1px solid #ddd;
+            background: #fafafa;
+        }
+
+        .top-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            column-gap: 2rem;
+            row-gap: 1rem;
+        }
+
+        .field-block {
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+            min-width: 400px;     /* ✅ 可完整容納長 bucket 名 */
+            max-width: 450px;
+        }
+
+        label {
+            font-size: .8rem;
+            font-weight: 600;
+        }
+
+        select,
+        input[type="text"] {
+            border: 1px solid #888;
+            border-radius: .4rem;
+            padding: .4rem .5rem;
+            font-family: '-apple-system', 'BlinkMacSystemFont', 'SF Pro', 'SF Pro Display', 'PingFang TC', 'Inter', 'Roboto', 'AppleGothic', 'Microsoft JhengHei UI', sans-serif;
+            font-size: .85rem;
+            width: 100%;
+            max-width: 420px;    /* ✅ 寬一點 */
+        }
+
+        input[readonly] { background: #eee; }
+
+        main {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+
+        aside {
+            width: 260px;
+            border-right: 1px solid #ddd;
+            padding: 1rem;
+            background: #fcfcfc;
+            display:flex;
+            flex-direction:column;
+            gap:1rem;
+        }
+
+        button {
+            border: 0;
+            background: #000;
+            color: #fff;
+            border-radius: .4rem;
+            padding: .6rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: .8rem;
+        }
+
+        button:disabled { background:#888; cursor:not-allowed; }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        #fileSection {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        #fileListWrapper {
+            flex: 1;
+            overflow: auto;
+            border-top: 1px solid #eee;
+            margin-top: 1rem;
+            padding: 0 1rem 1rem 1rem;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: .9rem;
+        }
+
+        thead {
+            background: #fafafa;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        th, td {
+            padding: .5rem .75rem;
+            border-bottom: 1px solid #eee;
+            word-break: break-all;
+            font-size: .8rem;
+        }
+
+        tr.file-row.selected { background: #dbeafe; }
+        tr.file-row:hover { background: #f1f5f9; }
+
+        footer {
+            border-top: 1px solid #ddd;
+            background:#fafafa;
+            padding:.75rem 1rem;
+            font-size:.7rem;
+            color:#666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="top-row">
+        <div class="field-block">
+            <label>Region</label>
+            <select id="regionSelect">
+                <option value="">-- 選擇一個 region --</option>
+
+                <optgroup label="United States">
+                    <option value="us-east-1">N. Virginia (us-east-1)</option>
+                    <option value="us-east-2">Ohio (us-east-2)</option>
+                    <option value="us-west-1">N. California (us-west-1)</option>
+                    <option value="us-west-2">Oregon (us-west-2)</option>
+                </optgroup>
+
+                <optgroup label="Asia Pacific">
+                    <option value="ap-south-1">Mumbai (ap-south-1)</option>
+                    <option value="ap-northeast-3">Osaka (ap-northeast-3)</option>
+                    <option value="ap-northeast-2">Seoul (ap-northeast-2)</option>
+                    <option value="ap-southeast-1">Singapore (ap-southeast-1)</option>
+                    <option value="ap-southeast-2">Sydney (ap-southeast-2)</option>
+                    <option value="ap-northeast-1">Tokyo (ap-northeast-1)</option>
+                </optgroup>
+
+                <optgroup label="Canada">
+                    <option value="ca-central-1">Central (ca-central-1)</option>
+                </optgroup>
+
+                <optgroup label="Europe">
+                    <option value="eu-central-1">Frankfurt (eu-central-1)</option>
+                    <option value="eu-west-1">Ireland (eu-west-1)</option>
+                    <option value="eu-west-2">London (eu-west-2)</option>
+                    <option value="eu-west-3">Paris (eu-west-3)</option>
+                    <option value="eu-north-1">Stockholm (eu-north-1)</option>
+                </optgroup>
+
+                <optgroup label="South America">
+                    <option value="sa-east-1">São Paulo (sa-east-1)</option>
+                </optgroup>
+
+                <option value="custom">其他 region…</option>
+            </select>
+            <input id="regionCustom" type="text" placeholder="其他，例如 ap-northeast-1" style="display:none;">
+        </div>
+
+        <div class="field-block">
+            <label>Bucket</label>
+            <input id="bucketInput" type="text" placeholder="s3-drive-xxxxxxxx..." />
+        </div>
+
+        <div class="field-block">
+            <label>上傳路徑 (根目錄'/'不用寫)</label>
+            <input id="prefixInput" type="text" value="" placeholder="photos 或 photos/trip1" />
+        </div>
+
+    </div>
+</header>
+
+<main>
+    <aside>
+        <div>
+            <button id="copyScriptBtn" onclick="copyCloudShellScript()">CloudShell 設置指令</button>
+        </div>
+        <div>
+            <label>上傳檔案</label>
+            <input id="fileInput" type="file" />
+            <button id="uploadBtn" style="margin-top:.5rem;">上傳</button>
+        </div>
+        <div id="uploadProgress" style="font-size:.8rem; color:#333;">尚未上傳</div>
+        <div>
+            <label>檔案操作</label>
+        </div>
+        <div class="button-row">
+            <button id="downloadBtn" disabled>下載</button>
+            <button id="shareBtn" disabled>分享</button>
+            <button id="openBtn" disabled>打開</button>
+<!--            <button id="deleteBtn" disabled style="background:#a00;">刪除</button>-->
+        </div>
+    </aside>
+
+    <section id="fileSection">
+        <div id="fileListWrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th style="width:60%;">最近上傳的檔案</th>
+                    <th style="width:20%;">大小 (bytes)</th>
+                    <th style="width:20%;">選取</th>
+                </tr>
+                </thead>
+                <tbody id="fileListBody">
+                <tr><td colspan="3" style="color:#999;">目前沒有檔案。先上傳一個。</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer>
+    免責聲明：本網頁僅供學術研究使用，請勿用於非法用途。使用者需自行承擔使用本網頁所產生之任何法律責任。作者不對任何因使用本網頁而產生的直接、間接、附帶或衍生的損害負責。網站可能有很大的權限，請自行負擔風險使用。
+</footer>
+
+<script>
+    // ---------------------------
+    // State
+    // ---------------------------
+
+    let uploadedFiles = []; // {key, name, size}
+    let selectedFileIdx = null;
+
+    const regionSelectEl = document.getElementById("regionSelect");
+    const regionCustomEl = document.getElementById("regionCustom");
+    const bucketInputEl = document.getElementById("bucketInput");
+    const prefixInputEl = document.getElementById("prefixInput");
+
+    const fileInputEl = document.getElementById("fileInput");
+    const uploadBtnEl = document.getElementById("uploadBtn");
+
+    const fileListBodyEl = document.getElementById("fileListBody");
+
+    const downloadBtnEl = document.getElementById("downloadBtn");
+    const shareBtnEl = document.getElementById("shareBtn");
+    const openBtnEl = document.getElementById("openBtn");
+
+    // ---------------------------
+    // Cookie helpers
+    // ---------------------------
+    function setCookie(name, value) {
+        // 簡單存 30 天
+        const days = 30;
+        const d = new Date();
+        d.setTime(d.getTime() + (days*24*60*60*1000));
+        const expires = "expires=" + d.toUTCString();
+        document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value) + "; " + expires + "; path=/";
+    }
+
+    // CloudShell設定指令：產一段一鍵 bucket 初始化腳本，複製+alert
+    async function copyCloudShellScript() {
+        const scriptText =
+            `bash -c '
+rand_suffix() {
+  tr -dc "a-z0-9" < /dev/urandom | head -c 32
+}
+REGION="\${AWS_REGION:-\${AWS_DEFAULT_REGION:-us-east-1}}"
+BUCKET="s3-drive-\$(rand_suffix)"
+
+aws s3api create-bucket --bucket "\$BUCKET" $(
+  [ "\$REGION" = "us-east-1" ] || echo --create-bucket-configuration LocationConstraint="\$REGION"
+) >/dev/null || { echo create-bucket failed; exit 1; }
+
+aws s3api put-bucket-cors --bucket "\$BUCKET" --cors-configuration '"'"'{
+  "CORSRules":[
+    {"AllowedHeaders":["*"],"AllowedMethods":["GET","PUT","HEAD"],"AllowedOrigins":["*"],"ExposeHeaders":["ETag"]}
+  ]
+}'"'"' >/dev/null
+
+aws s3api put-public-access-block --bucket "\$BUCKET" --public-access-block-configuration '"'"'{
+  "BlockPublicAcls": false,
+  "IgnorePublicAcls": false,
+  "BlockPublicPolicy": false,
+  "RestrictPublicBuckets": false
+}'"'"' >/dev/null
+
+POLICY_DOC=$(cat <<EOF
+{
+  "Version":"2012-10-17",
+  "Statement":[
+    {
+      "Sid":"PublicReadWriteNoListBucket",
+      "Effect":"Allow",
+      "Principal":"*",
+      "Action":[ "s3:GetObject","s3:PutObject" ],
+      "Resource":"arn:aws:s3:::\$BUCKET/*"
+    }
+  ]
+}
+EOF
+)
+aws s3api put-bucket-policy --bucket "\$BUCKET" --policy "\$POLICY_DOC" >/dev/null
+
+echo "Region:"
+echo "  \$REGION"
+echo "Bucket:"
+echo "  \$BUCKET"
+'`;
+
+        try {
+            await navigator.clipboard.writeText(scriptText);
+            alert("CloudShell指令已拷貝");
+        } catch {
+            alert("CloudShell指令：\n" + scriptText);
+        }
+    }
+    function getCookie(name) {
+        const target = encodeURIComponent(name) + "=";
+        const parts = document.cookie.split(";");
+        for (let raw of parts) {
+            let c = raw.trim();
+            if (c.indexOf(target) === 0) {
+                return decodeURIComponent(c.substring(target.length, c.length));
+            }
+        }
+        return "";
+    }
+
+    function saveStateToCookieAndURL() {
+        const region = getRegion();
+        const bucket = bucketInputEl.value.trim();
+        const path   = normalizedPrefixForURL(); // may have trailing '/'
+
+        setCookie("s3_region", region || "");
+        setCookie("s3_bucket", bucket || "");
+        setCookie("s3_path", path || "");
+
+        // 同步網址列
+        const params = new URLSearchParams(window.location.search);
+        if (region) { params.set("region", region); } else { params.delete("region"); }
+        if (bucket) { params.set("bucket", bucket); } else { params.delete("bucket"); }
+        if (path)   { params.set("path", path); }   else { params.delete("path"); }
+
+        const newUrl = window.location.pathname + (params.toString() ? ("?" + params.toString()) : "");
+        history.replaceState(null, "", newUrl);
+    }
+
+    function loadStateFromURLorCookie() {
+        const params = new URLSearchParams(window.location.search);
+        let region = params.get("region") || getCookie("s3_region") || "";
+        let bucket = params.get("bucket") || getCookie("s3_bucket") || "";
+        let path   = params.get("path")   || getCookie("s3_path")    || "";
+
+        // 填 region
+        applyRegionValue(region);
+
+        // 填 bucket
+        if (bucket) {
+            bucketInputEl.value = bucket;
+        }
+
+        // 填 prefixInput (去掉尾端 / 再顯示)
+        if (path) {
+            prefixInputEl.value = stripTrailingSlash(path);
+        }
+
+        // 進來時就同步一次網址（確保 cookie-only 也上 URL）
+        saveStateToCookieAndURL();
+    }
+
+    function stripTrailingSlash(p) {
+        return p.replace(/\/+$/, "");
+    }
+
+    // ---------------------------
+    // Region helpers
+    // ---------------------------
+
+    function regionIsInSelectList(code) {
+        const opts = [...regionSelectEl.querySelectorAll("option")];
+        return opts.some(o => o.value === code);
+    }
+
+    function applyRegionValue(code) {
+        if (!code) {
+            regionSelectEl.value = "";
+            regionCustomEl.style.display = "none";
+            regionCustomEl.value = "";
+            return;
+        }
+        if (regionIsInSelectList(code)) {
+            regionSelectEl.value = code;
+            regionCustomEl.style.display = "none";
+            regionCustomEl.value = "";
+        } else {
+            regionSelectEl.value = "custom";
+            regionCustomEl.style.display = "block";
+            regionCustomEl.value = code;
+        }
+    }
+
+    function getRegion() {
+        const v = regionSelectEl.value;
+        if (v === "custom") {
+            return regionCustomEl.value.trim();
+        }
+        return v;
+    }
+
+    // ---------------------------
+    // Path / prefix helpers
+    // ---------------------------
+
+    // prefix 規則：
+    // - "" => ""
+    // - "abc" => "abc/"
+    // - "abc/def" => "abc/def/"
+    function normalizePrefix(raw) {
+        let p = raw.trim();
+        p = p.replace(/^\/+/, "");   // leading /
+        p = p.replace(/\/+$/, "");   // trailing /
+        if (p === "") return "";
+        return p + "/";
+    }
+
+    // 為寫入 URL / cookie，用 normalizePrefix，
+    // 但如果是空字串，儲存 "/" （方便你的 `?path=/` 書籤）
+    function normalizedPrefixForURL() {
+        const norm = normalizePrefix(prefixInputEl.value);
+        if (norm === "") {
+            return "/"; // root 表示成 "/"
+        }
+        return norm;
+    }
+
+    function getFullKey(prefixNorm, filename) {
+        return prefixNorm + filename;
+    }
+
+    // ---------------------------
+    // S3 helpers
+    // ---------------------------
+
+    function s3BaseURL() {
+        const region = getRegion();
+        const bucket = bucketInputEl.value.trim();
+        if (!region || !bucket) return null;
+        return `https://${bucket}.s3.${region}.amazonaws.com`;
+    }
+
+    // ---------------------------
+    // UI render / selection
+    // ---------------------------
+
+    function currentSelectedFile() {
+        if (selectedFileIdx == null) return null;
+        return uploadedFiles[selectedFileIdx] || null;
+    }
+
+    function objectURLForSelected() {
+        const base = s3BaseURL();
+        const f = currentSelectedFile();
+        if (!base || !f) return null;
+        return base + "/" + encodeURI(f.key);
+    }
+
+    function reRenderTable() {
+        if (uploadedFiles.length === 0) {
+            fileListBodyEl.innerHTML = `<tr><td colspan="3" style="color:#999;">目前沒有檔案。先上傳一個。</td></tr>`;
+            return;
+        }
+        fileListBodyEl.innerHTML = "";
+        uploadedFiles.forEach((f, idx) => {
+            const tr = document.createElement("tr");
+            tr.className = "file-row" + (idx === selectedFileIdx ? " selected" : "");
+
+            const tdName = document.createElement("td");
+            const tdSize = document.createElement("td");
+            const tdState = document.createElement("td");
+
+            tdName.textContent = f.key;
+            tdSize.textContent = f.size ?? "";
+            tdState.textContent = (idx === selectedFileIdx) ? "已選取" : "";
+
+            tr.addEventListener("click", () => {
+                selectedFileIdx = idx;
+                updateSelectionUI();
+                reRenderTable();
+            });
+
+            tr.appendChild(tdName);
+            tr.appendChild(tdSize);
+            tr.appendChild(tdState);
+            fileListBodyEl.appendChild(tr);
+        });
+    }
+
+    function updateSelectionUI() {
+        const hasSel = !!currentSelectedFile();
+        downloadBtnEl.disabled = !hasSel;
+        shareBtnEl.disabled = !hasSel;
+        openBtnEl.disabled   = !hasSel;
+    }
+
+    // ---------------------------
+    // Actions
+    // ---------------------------
+
+    async function uploadFile() {
+        const base = s3BaseURL();
+        if (!base) {
+            alert("請先填 region / bucket / 路徑");
+            return;
+        }
+
+        const fileObj = fileInputEl.files[0];
+        if (!fileObj) {
+            alert("請先選檔");
+            return;
+        }
+
+        const prefixNorm = normalizePrefix(prefixInputEl.value);
+        const key = getFullKey(prefixNorm, fileObj.name);
+        const url = base + "/" + encodeURI(key);
+
+        // const res = await fetch(url, {
+        //     method: "PUT",
+        //     body: fileObj
+        // });
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", url, true);
+
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                document.getElementById("uploadProgress").textContent = `上傳進度：${percent}%`;
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                document.getElementById("uploadProgress").textContent = "上傳完成 ✅";
+                uploadedFiles.push({
+                    key,
+                    name: fileObj.name,
+                    size: fileObj.size
+                });
+
+                selectedFileIdx = uploadedFiles.length - 1;
+                updateSelectionUI();
+                reRenderTable();
+                saveUploadedFilesToCookie(); // ⬅️ 新增這行：存cookie
+                alert("上傳成功");
+            } else {
+                alert("上傳失敗：" + xhr.status + " " + xhr.statusText + "\n" + xhr.responseText);
+            }
+        };
+
+        xhr.onerror = () => {
+            alert("上傳失敗：網路錯誤");
+        };
+
+        xhr.send(fileObj);
+
+        if (!res.ok) {
+            const txt = await res.text().catch(()=>"(無法讀取錯誤本文)");
+            alert("上傳失敗:\n" + res.status + " " + res.statusText + "\n" + txt);
+            return;
+        }
+
+        uploadedFiles.push({
+            key,
+            name: fileObj.name,
+            size: fileObj.size
+        });
+
+        selectedFileIdx = uploadedFiles.length - 1;
+        updateSelectionUI();
+        reRenderTable();
+        alert("上傳成功");
+    }
+
+    async function downloadSelected() {
+        const f = currentSelectedFile();
+        if (!f) {
+            alert("尚未選取檔案");
+            return;
+        }
+        const base = s3BaseURL();
+        if (!base) {
+            alert("請先填 region / bucket / 路徑");
+            return;
+        }
+
+        const url = base + "/" + encodeURI(f.key);
+        const res = await fetch(url, { method:"GET" });
+
+        if (!res.ok) {
+            const txt = await res.text().catch(()=>"(無法讀取錯誤本文)");
+            alert("下載失敗:\n" + res.status + " " + res.statusText + "\n" + txt);
+            return;
+        }
+
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = f.name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    async function shareSelected() {
+        const url = objectURLForSelected();
+        if (!url) {
+            alert("尚未選取檔案");
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(url);
+            alert("已拷貝連結:\n" + url);
+        } catch {
+            alert("連結:\n" + url);
+        }
+    }
+
+    function openSelected() {
+        const url = objectURLForSelected();
+        if (!url) {
+            alert("尚未選取檔案");
+            return;
+        }
+        window.open(url, "_blank");
+    }
+
+    function saveUploadedFilesToCookie() {
+        // 只存最近 10 筆
+        const recent = uploadedFiles.slice(-10);
+        setCookie("s3_recent_files", JSON.stringify(recent));
+    }
+
+    function loadUploadedFilesFromCookie() {
+        const raw = getCookie("s3_recent_files");
+        if (raw) {
+            try {
+                uploadedFiles = JSON.parse(raw);
+            } catch {
+                uploadedFiles = [];
+            }
+        }
+    }
+
+    // ---------------------------
+    // Event wiring
+    // ---------------------------
+
+    regionSelectEl.addEventListener("change", () => {
+        // 顯示/隱藏自訂欄位
+        regionCustomEl.style.display = (regionSelectEl.value === "custom") ? "block" : "none";
+        // 在切換 region 後存狀態+更新網址
+        saveStateToCookieAndURL();
+    });
+
+    regionCustomEl.addEventListener("input", () => {
+        saveStateToCookieAndURL();
+    });
+
+    bucketInputEl.addEventListener("input", () => {
+        saveStateToCookieAndURL();
+    });
+
+    prefixInputEl.addEventListener("input", () => {
+        saveStateToCookieAndURL();
+    });
+
+    uploadBtnEl.addEventListener("click", uploadFile);
+    downloadBtnEl.addEventListener("click", downloadSelected);
+    shareBtnEl.addEventListener("click", shareSelected);
+    openBtnEl.addEventListener("click", openSelected);
+
+    // ---------------------------
+    // Init on load
+    // ---------------------------
+
+    loadStateFromURLorCookie();
+    loadUploadedFilesFromCookie();
+    reRenderTable();
+    updateSelectionUI();
+</script>
+
+</body>
+</html>
