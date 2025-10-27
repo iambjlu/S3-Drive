@@ -1,6 +1,6 @@
 # S3-Drive
 簡單地將S3用於進行上傳與下載<br />
-使用時先打開 [index.html](index.html) 拷貝對應程式碼<br />
+使用時先打開 [index.html](index.html) 按下拷貝CloudShell設置指令<br />
 貼到[AWS CloudShell](https://ap-southeast-1.console.aws.amazon.com/cloudshell/home?region=ap-southeast-1)<br />
 CloudShell會回傳region和bucket如圖<br />
 即可成為簡易雲碟<br /><br />
@@ -16,6 +16,7 @@ CloudShell會回傳region和bucket如圖<br />
 並且任何人知道bucket名稱都能上傳內容<br />
 安全防護不是此專案重點，僅適合非常短期測試使用，使用時請自行承擔風險<br />
 單檔上傳上限5GB<br />
+如欲管理S3儲存的內容及儲存桶設定，請造訪[AWS Console上的S3](https://us-east-1.console.aws.amazon.com/s3/home?region=ap-southeast-1)
 
 # 預覽圖
 <img width="1800" height="1169" alt="image1" src="https://github.com/user-attachments/assets/89eda663-83f3-4a2f-b3f5-0288cf94e522" />
