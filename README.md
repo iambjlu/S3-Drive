@@ -1,7 +1,7 @@
 # S3-Drive
-簡單地將S3用於進行上傳與下載
-使用時先打開index.html拷貝對應程式碼貼到AWS CloudShell
-CloudShell會回傳region和bucket如圖
+簡單地將S3用於進行上傳與下載<br />
+使用時先打開index.html拷貝對應程式碼貼到AWS CloudShell<br />
+CloudShell會回傳region和bucket如圖<br />
 即可成為簡易雲碟<br />
 <img width="369" height="187" alt="image" src="https://github.com/user-attachments/assets/cd069ff8-8f15-44b0-bd01-936918d538e1" />
 
