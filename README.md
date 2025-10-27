@@ -15,6 +15,7 @@ CloudShell會回傳region和bucket如圖<br />
 (透過「分享」按鈕可以拷貝連結)<br />
 並且任何人知道bucket名稱都能上傳內容<br />
 安全防護不是此專案重點，僅適合非常短期測試使用，使用時請自行承擔風險<br />
+單檔上傳上限5GB<br />
 
 # 預覽圖
 <img width="1800" height="1169" alt="image1" src="https://github.com/user-attachments/assets/89eda663-83f3-4a2f-b3f5-0288cf94e522" />
